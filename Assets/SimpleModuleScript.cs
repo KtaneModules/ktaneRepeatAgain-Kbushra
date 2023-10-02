@@ -17,9 +17,6 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	public TextMesh[] screenTexts;
 
-	public AudioSource correct;
-	public AudioSource triggerSound;
-
 	private int SolveNum;
 	private int SolveGoal;
 	private string textFinder1;
@@ -27,6 +24,9 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	public int RandNum;
 	public int RandGoal;
+
+	private int strikecount;
+	private int solvecount;
 
 	public int TimeGoal = 0;
 	public int TimeCheck;
@@ -38,6 +38,9 @@ public class SimpleModuleScript : MonoBehaviour {
 	bool IsTimeModified = false;
 	bool TimerOn = false;
 	bool FailSafeOn = false;
+
+	bool TimeModeActive;
+	bool ZenModeActive;
 
 
 	void Awake() 
@@ -53,6 +56,8 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	void Start ()
 	{
+		strikecount = info.GetStrikes ();
+
 		SolveGoal = Rnd.Range(3, 10);
 		for (int i = 0; i < SolveGoal; i++)
 			textFinder1 = SolveGoal.ToString();
@@ -77,7 +82,7 @@ public class SimpleModuleScript : MonoBehaviour {
 			RandNum = Random.Range (1, 2001);
 			if (RandNum == RandGoal) 
 			{
-				triggerSound.Play ();
+				audio.PlayGameSoundAtTransform (KMSoundOverride.SoundEffect.NeedyActivated, Button [0].transform);
 				On = true;
 			}
 		}
@@ -99,19 +104,40 @@ public class SimpleModuleScript : MonoBehaviour {
 		if (SolveNum == SolveGoal) 
 		{
 			module.HandlePass ();
-			correct.Play ();
 			_isSolved = true;
 		}
 
 		if (TimeEnd == (int) info.GetTime ()) 
 		{
-			module.HandleStrike ();
-			TimeGoal = 0;
-			TimeEnd = 0;
-			On = false;
+			if (TimeModeActive == false) 
+			{
+				module.HandleStrike ();
+				TimeEnd = 0;
+				TimeGoal = 0;
+				timeCreating = false;
+				On = false;
+			}
+			else
+			{
+				if (strikecount != info.GetStrikes () || solvecount != info.GetSolvedModuleIDs().Count) 
+				{
+					Invoke ("Timer", 0);
+					TimerOn = true;
+					strikecount = info.GetStrikes ();
+					solvecount = info.GetSolvedModuleIDs ().Count;
+				}
+				else
+				{
+					module.HandleStrike ();
+					TimeEnd = 0;
+					TimeGoal = 0;
+					timeCreating = false;
+					On = false;
+				}
+			}
 		}
 
-		if ((int)info.GetTime () == 151) 
+		if ((int)info.GetTime () <= 151) 
 		{
 			FailSafeOn = true;
 		}
@@ -119,6 +145,16 @@ public class SimpleModuleScript : MonoBehaviour {
 		{
 			Invoke ("FailSafe", 1);
 			FailSafeOn = false;
+		}
+		if (TimeModeActive == true) 
+		{
+			if (strikecount != info.GetStrikes () || solvecount != info.GetSolvedModuleIDs().Count) 
+			{
+				Invoke ("Timer", 0);
+				TimerOn = true;
+				strikecount = info.GetStrikes ();
+				solvecount = info.GetSolvedModuleIDs ().Count;
+			}
 		}
 	}
 
@@ -135,7 +171,7 @@ public class SimpleModuleScript : MonoBehaviour {
 
 		On = true;
 		SolveNum = SolveGoal - 1;
-		triggerSound.Play ();
+		audio.PlayGameSoundAtTransform (KMSoundOverride.SoundEffect.NeedyActivated, Button [0].transform);
 
 		for (int i = 0; i < SolveGoal; i++)
 			textFinder1 = SolveGoal.ToString();
@@ -148,7 +184,19 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	void Timer()
 	{
-		TimeEnd = (int) info.GetTime () - 150;
+		TimeEnd = 0;
+		if (ZenModeActive == true)
+		{
+			TimeEnd = (int) info.GetTime () + 150;
+		}
+		if (TimeModeActive == true) 
+		{
+			TimeEnd = (int) info.GetTime () - 90;
+		}
+		else
+		{
+			TimeEnd = (int) info.GetTime () - 150;
+		}
 	}
 
 	void TimeCreator()
@@ -208,7 +256,6 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	void buttonPress(KMSelectable pressedButton)
 	{
-		GetComponent<KMAudio>().PlayGameSoundAtTransformWithRef(KMSoundOverride.SoundEffect.ButtonPress, transform);
 		int buttonPosition = new int();
 		for(int i = 0; i < Button.Length; i++)
 		{
@@ -221,6 +268,8 @@ public class SimpleModuleScript : MonoBehaviour {
 
 		if (On == true) 
 		{
+			audio.PlayGameSoundAtTransform (KMSoundOverride.SoundEffect.ButtonPress, Button [buttonPosition].transform);
+			Button [buttonPosition].AddInteractionPunch ();
 			switch (buttonPosition) 
 			{
 			case 0:
@@ -229,20 +278,17 @@ public class SimpleModuleScript : MonoBehaviour {
 					if(timeCreating == false)
 					{
 						Invoke ("TimeCreator", 0);
-						correct.Play ();
 					}
 
 					if (timeCreating == true) 
 					{
 						if ((int) info.GetTime () % 60 == TimeGoal) 
 						{
-							correct.Play ();
 							SolveNum++;
 							On = false;
 						}
 						else 
 						{
-							correct.Play ();
 							Debug.LogFormat ("Last two digits were {0} and time goal was {1}", (int) info.GetTime () % 60, TimeGoal);
 							TimeGoal = 0;
 							module.HandleStrike ();

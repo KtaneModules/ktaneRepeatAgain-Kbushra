@@ -25,8 +25,8 @@
 
                 <h3>Step 1: Activation</h3>
                 
-                <p>The module will turn on randomly and make a very unique sound. When the module is on, the button will show an exclamation mark. These are the only signs that the module is on</p>
-                <p>This will activate a 2.5 minute timer. However, the module will not show the current state of the timer, making it hard to decipher how long is left</p>
+                <p>The module will turn on randomly and make a needy activation sound. When the module is on, the button will show an exclamation mark. These are the only signs that the module is on</p>
+                <p>This will activate a 2.5 minute timer (unless time mode is being used, then it activates a 1.5 minute timer that resets upon a strike or solve). However, the module will not show the current state of the timer, making it hard to decipher how long is left. Also, if steady mode is being used, the timer will decrease along with the strike penalty.</p>
                 <p>TIP: It is better to figure out the solution using step 2 BEFORE the module triggers.</p>
                 
                 <h3>Step 2: Timing</h3>
@@ -61,13 +61,16 @@
                 
                 <h3>Step 3: Solving</h3>
                 
-                <p>The number acquired from step 2 is the 2 digit second number which the bomb timer must have when the button is pressed again. If the number aqcuired is a single digit, add a preceding 0 (eg. 9 becomes 09)</p>
-                <p>If this is done correctly, the module will add 1 to the bottom display and turn off. When the steps are repeated enough times for the bottom and top display to match, the module is solved.</p>
+                <p>The number acquired from step 2 is the 2 digit second number which the bomb timer must have when the button is pressed again (the first press calculates the number, the second press submits). If the number acquired is a single digit, add a preceding 0 (eg. 9 becomes 09)</p>
+                <p>If this is done correctly, the module will add 1 to the bottom display and turn off. When it turns back on, it will repeat these steps, so press once to calculate the number again and the second press submits the new number etc. When the steps are repeated enough times for the bottom and top display to match, the module is solved.</p>
                 
                 <h3>Step 4: Failsafe</h3>
                 
-                <p>Of course, there is a chance that there won't be enough time for the module to solve, so as a failsafe, when the time left is 2:30, the module will turn on and create one final stage. If the module was already on, everything from the activation is reset and the new activation must be solved.</p>
+                <p>Of course, there is a chance that there won't be enough time for the module to solve, so as a failsafe, when the time left is 2:30 or less, the module will turn on and create one final stage. If the module was already on, everything from the activation is reset and the new activation must be solved.</p>
                 
+                <h3>Step 5: Striking</h3>
+                
+                <p>If the button is pressed at the wrong time, or its timer runs out, the module will give a strike, and when it reactivates again, the first button press will calculate a new number, leaving the old one behind.</p>
             </div>
             <div class="page-footer relative-footer">Page 2 of 2</div>
         </div>

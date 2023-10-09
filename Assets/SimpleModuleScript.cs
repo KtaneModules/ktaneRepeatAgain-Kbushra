@@ -137,14 +137,10 @@ public class SimpleModuleScript : MonoBehaviour {
 			}
 		}
 
-		if ((int)info.GetTime () <= 151) 
-		{
-			FailSafeOn = true;
-		}
-		if (FailSafeOn == true) 
+		if ((int)info.GetTime () <= 151 && FailSafeOn == false) 
 		{
 			Invoke ("FailSafe", 1);
-			FailSafeOn = false;
+			FailSafeOn = true;
 		}
 		if (TimeModeActive == true) 
 		{

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using KModkit;
 using Newtonsoft.Json;
@@ -303,5 +304,80 @@ public class SimpleModuleScript : MonoBehaviour {
 	{
 		Debug.LogFormat("[Again #{0}] {1}", ModuleId, message);
 	}
+
+	//twitch plays
+	#pragma warning disable 414
+	private readonly string TwitchHelpMessage = @"!{0} press (##) [Presses the button (optionally when the last two digits of the bomb's timer are '##')]";
+	#pragma warning restore 414
+	IEnumerator ProcessTwitchCommand(string command)
+	{
+		string[] parameters = command.Split(' ');
+		if (Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+		{
+			if (parameters.Length > 2)
+				yield return "sendtochaterror Too many parameters!";
+			else if (parameters.Length == 2)
+			{
+				int temp = -1;
+				if (!int.TryParse(parameters[1], out temp))
+				{
+					yield return "sendtochaterror!f The specified number '" + parameters[1] + "' is invalid!";
+					yield break;
+				}
+				if (temp < 0 || temp > 59)
+				{
+					yield return "sendtochaterror The specified number '" + parameters[1] + "' is out of range 00-59!";
+					yield break;
+				}
+				if (parameters[1].Length != 2)
+				{
+					yield return "sendtochaterror The specified number '" + parameters[1] + "' is not 2 digits long!";
+					yield break;
+				}
+				if (!On)
+                {
+					yield return "sendtochaterror The button can only be pressed when the module is on!";
+					yield break;
+				}
+				yield return null;
+				while (temp != (int)info.GetTime() % 60) yield return "trycancel Halted waiting to press the button due to a cancel request!";
+				Button[0].OnInteract();
+			}
+			else if (parameters.Length == 1)
+			{
+				if (!On)
+				{
+					yield return "sendtochaterror The button can only be pressed when the module is on!";
+					yield break;
+				}
+				yield return null;
+				Button[0].OnInteract();
+			}
+		}
+	}
+
+	void TwitchHandleForcedSolve()
+	{
+		StartCoroutine(HandleAutoSolve());
+	}
+
+	IEnumerator HandleAutoSolve()
+    {
+		while (!_isSolved)
+        {
+			while (!On) yield return null;
+			pressAgain:
+			Button[0].OnInteract();
+			yield return null;
+			while ((int)info.GetTime() % 60 != TimeGoal)
+            {
+				yield return null;
+				if (!timeCreating)
+					goto pressAgain;
+            }
+			Button[0].OnInteract();
+			yield return null;
+		}
+    }
 }
 

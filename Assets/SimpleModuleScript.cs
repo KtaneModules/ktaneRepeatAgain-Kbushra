@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using KModkit;
 using Newtonsoft.Json;
@@ -22,15 +23,15 @@ public class SimpleModuleScript : MonoBehaviour {
 	private string textFinder1;
 	private string textFinder2;
 
-	public int RandNum;
-	public int RandGoal;
+	private int RandNum;
+	private int RandGoal;
 
 	private int strikecount;
 	private int solvecount;
 
-	public int TimeGoal = 0;
-	public int TimeCheck;
-	public int TimeEnd;
+	private int TimeGoal = 0;
+	private int TimeCheck;
+	private int TimeEnd = -1;
 
 	bool _isSolved = false;
 	bool On = false;
@@ -41,6 +42,7 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	bool TimeModeActive;
 	bool ZenModeActive;
+	bool lightsOn;
 
 
 	void Awake() 
@@ -52,6 +54,7 @@ public class SimpleModuleScript : MonoBehaviour {
 			KMSelectable pressedButton = button;
 			button.OnInteract += delegate () { buttonPress(pressedButton); return false; };
 		}
+		module.OnActivate = delegate() {lightsOn = true;};
 	}
 
 	void Start ()
@@ -68,56 +71,83 @@ public class SimpleModuleScript : MonoBehaviour {
 			textFinder2 = SolveNum.ToString();
 		screenTexts[1].text = textFinder2;
 
-		RandGoal = Random.Range (1, 2001);
+		RandGoal = Random.Range (1, 5001);
 	}
 
 	void FixedUpdate()
 	{
-		if (On == false) 
+		if(lightsOn == true)
 		{
-			TimerOn = false;
-			screenTexts[2].text = "";
-
-			timeCreating = false;
-			RandNum = Random.Range (1, 2001);
-			if (RandNum == RandGoal) 
+			if (On == false) 
 			{
-				audio.PlayGameSoundAtTransform (KMSoundOverride.SoundEffect.NeedyActivated, Button [0].transform);
-				On = true;
-			}
-		}
-		else 
-		{
-			screenTexts[2].text = "!";
+				TimerOn = false;
+				screenTexts[2].text = "";
 
-			if (TimerOn == false) 
-			{
-				Invoke ("Timer", 0);
-				TimerOn = true;
-			}
-		}
-
-		for (int i = 0; i < SolveNum; i++)
-			textFinder2 = SolveNum.ToString();
-		screenTexts[1].text = textFinder2;
-
-		if (SolveNum == SolveGoal) 
-		{
-			module.HandlePass ();
-			_isSolved = true;
-		}
-
-		if (TimeEnd == (int) info.GetTime ()) 
-		{
-			if (TimeModeActive == false) 
-			{
-				module.HandleStrike ();
-				TimeEnd = 0;
-				TimeGoal = 0;
 				timeCreating = false;
-				On = false;
+				RandNum = Random.Range (1, 5001);
+				if (RandNum == RandGoal) 
+				{
+					audio.PlayGameSoundAtTransform (KMSoundOverride.SoundEffect.NeedyActivated, Button [0].transform);
+					On = true;
+				}
 			}
-			else
+			else 
+			{
+				screenTexts[2].text = "!";
+
+				if (TimerOn == false) 
+				{
+					Invoke ("Timer", 0);
+					TimerOn = true;
+				}
+			}
+
+			for (int i = 0; i < SolveNum; i++)
+				textFinder2 = SolveNum.ToString();
+			screenTexts[1].text = textFinder2;
+
+			if (SolveNum == SolveGoal) 
+			{
+				module.HandlePass ();
+				_isSolved = true;
+			}
+
+			if (TimeEnd == (int) info.GetTime () && On == true) 
+			{
+				if (TimeModeActive == false) 
+				{
+					module.HandleStrike ();
+					TimeEnd = -1;
+					TimeGoal = 0;
+					timeCreating = false;
+					On = false;
+				}
+				else
+				{
+					if (strikecount != info.GetStrikes () || solvecount != info.GetSolvedModuleIDs().Count) 
+					{
+						Invoke ("Timer", 0);
+						TimerOn = true;
+						strikecount = info.GetStrikes ();
+						solvecount = info.GetSolvedModuleIDs ().Count;
+					}
+					else
+					{
+						module.HandleStrike ();
+						TimeEnd = -1;
+						TimeGoal = 0;
+						timeCreating = false;
+						On = false;
+					}
+				}
+			}
+
+			if (((int)info.GetTime () <= 151 && FailSafeOn == false) && ZenModeActive == false) 
+			{
+				Invoke ("FailSafe", 1);
+				FailSafeOn = true;
+			}
+			if (TimeModeActive == true) 
 			{
 				if (strikecount != info.GetStrikes () || solvecount != info.GetSolvedModuleIDs().Count) 
 				{
@@ -126,30 +156,6 @@ public class SimpleModuleScript : MonoBehaviour {
 					strikecount = info.GetStrikes ();
 					solvecount = info.GetSolvedModuleIDs ().Count;
 				}
-				else
-				{
-					module.HandleStrike ();
-					TimeEnd = 0;
-					TimeGoal = 0;
-					timeCreating = false;
-					On = false;
-				}
-			}
-		}
-
-		if ((int)info.GetTime () <= 151 && FailSafeOn == false) 
-		{
-			Invoke ("FailSafe", 1);
-			FailSafeOn = true;
-		}
-		if (TimeModeActive == true) 
-		{
-			if (strikecount != info.GetStrikes () || solvecount != info.GetSolvedModuleIDs().Count) 
-			{
-				Invoke ("Timer", 0);
-				TimerOn = true;
-				strikecount = info.GetStrikes ();
-				solvecount = info.GetSolvedModuleIDs ().Count;
 			}
 		}
 	}
@@ -157,7 +163,7 @@ public class SimpleModuleScript : MonoBehaviour {
 	void FailSafe()
 	{
 		RandGoal = 0;
-		TimeEnd = 0;
+		TimeEnd = -1;
 		TimeGoal = 0;
 		On = false;
 		timeCreating = false;
@@ -180,7 +186,6 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	void Timer()
 	{
-		TimeEnd = 0;
 		if (ZenModeActive == true)
 		{
 			TimeEnd = (int) info.GetTime () + 150;
@@ -296,6 +301,80 @@ public class SimpleModuleScript : MonoBehaviour {
 				}
 				break;
 			}
+		}
+	}
+
+	#pragma warning disable 414
+	private readonly string TwitchHelpMessage = @"!{0} press (##) [Presses the button (optionally when the last two digits of the bomb's timer are '##')]";
+	#pragma warning restore 414
+	IEnumerator ProcessTwitchCommand(string command)
+	{
+		string[] parameters = command.Split(' ');
+		if (Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+		{
+			if (parameters.Length > 2)
+				yield return "sendtochaterror Too many parameters!";
+			else if (parameters.Length == 2)
+			{
+				int temp = -1;
+				if (!int.TryParse(parameters[1], out temp))
+				{
+					yield return "sendtochaterror!f The specified number '" + parameters[1] + "' is invalid!";
+					yield break;
+				}
+				if (temp < 0 || temp > 59)
+				{
+					yield return "sendtochaterror The specified number '" + parameters[1] + "' is out of range 00-59!";
+					yield break;
+				}
+				if (parameters[1].Length != 2)
+				{
+					yield return "sendtochaterror The specified number '" + parameters[1] + "' is not 2 digits long!";
+					yield break;
+				}
+				if (!On)
+				{
+					yield return "sendtochaterror The button can only be pressed when the module is on!";
+					yield break;
+				}
+				yield return null;
+				while (temp != (int)info.GetTime() % 60) yield return "trycancel Halted waiting to press the button due to a cancel request!";
+				Button[0].OnInteract();
+			}
+			else if (parameters.Length == 1)
+			{
+				if (!On)
+				{
+					yield return "sendtochaterror The button can only be pressed when the module is on!";
+					yield break;
+				}
+				yield return null;
+				Button[0].OnInteract();
+			}
+		}
+	}
+
+	void TwitchHandleForcedSolve()
+	{
+		StartCoroutine(HandleAutoSolve());
+	}
+
+	IEnumerator HandleAutoSolve()
+	{
+		while (!_isSolved)
+		{
+			while (!On) yield return null;
+			pressAgain:
+			Button[0].OnInteract();
+			yield return null;
+			while ((int)info.GetTime() % 60 != TimeGoal)
+			{
+				yield return null;
+				if (!timeCreating)
+					goto pressAgain;
+			}
+			Button[0].OnInteract();
+			yield return null;
 		}
 	}
 

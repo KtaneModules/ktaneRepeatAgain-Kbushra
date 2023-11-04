@@ -36,7 +36,6 @@ public class SimpleModuleScript : MonoBehaviour {
 	bool _isSolved = false;
 	bool On = false;
 	bool timeCreating = false;
-	bool IsTimeModified = false;
 	bool TimerOn = false;
 	bool FailSafeOn = false;
 
@@ -102,8 +101,7 @@ public class SimpleModuleScript : MonoBehaviour {
 				}
 			}
 
-			for (int i = 0; i < SolveNum; i++)
-				textFinder2 = SolveNum.ToString();
+			textFinder2 = SolveNum.ToString();
 			screenTexts[1].text = textFinder2;
 
 			if (SolveNum == SolveGoal) 
@@ -117,6 +115,7 @@ public class SimpleModuleScript : MonoBehaviour {
 				if (TimeModeActive == false) 
 				{
 					module.HandleStrike ();
+					Log ("Timer expired!");
 					TimeEnd = -1;
 					TimeGoal = 0;
 					timeCreating = false;
@@ -134,6 +133,7 @@ public class SimpleModuleScript : MonoBehaviour {
 					else
 					{
 						module.HandleStrike ();
+						Log ("Timer expired!");
 						TimeEnd = -1;
 						TimeGoal = 0;
 						timeCreating = false;
@@ -175,12 +175,10 @@ public class SimpleModuleScript : MonoBehaviour {
 		SolveNum = SolveGoal - 1;
 		audio.PlayGameSoundAtTransform (KMSoundOverride.SoundEffect.NeedyActivated, Button [0].transform);
 
-		for (int i = 0; i < SolveGoal; i++)
-			textFinder1 = SolveGoal.ToString();
+		textFinder1 = SolveGoal.ToString();
 		screenTexts[0].text = textFinder1;
 
-		for (int i = 0; i < SolveNum; i++)
-			textFinder2 = SolveNum.ToString();
+		textFinder2 = SolveNum.ToString();
 		screenTexts[1].text = textFinder2;
 	}
 
@@ -202,56 +200,46 @@ public class SimpleModuleScript : MonoBehaviour {
 
 	void TimeCreator()
 	{
+		TimeGoal = 0;
 		if (info.GetStrikes () == 0) 
 		{
 			TimeGoal = TimeGoal + 69;
-			IsTimeModified = true;
+			Log ("Add 69");
 		}
 		if (info.GetStrikes () == 1) 
 		{
 			TimeGoal = TimeGoal + 21;
-			IsTimeModified = true;
 		}
 		if (info.GetStrikes () == 2) 
 		{
 			TimeGoal = TimeGoal + 7;
-			IsTimeModified = true;
 		}
 		if (info.GetStrikes () > 2) 
 		{
 			TimeGoal = TimeGoal + 666;
-			IsTimeModified = true;
 		}
 		if (info.GetIndicators().ToList().Count > SolveNum) 
 		{
-			TimeGoal = TimeGoal + SolveGoal;
-			IsTimeModified = true;
+			TimeGoal = TimeGoal + SolveGoal + SolveNum - 2;
 		}
 		if (info.GetIndicators().ToList().Count < SolveNum) 
 		{
-			TimeGoal = TimeGoal - SolveGoal;
-			IsTimeModified = true;
+			TimeGoal = TimeGoal - SolveGoal - SolveNum + 20;
 		}
 		if (info.GetSolvedModuleIDs ().Contains ("BigButton"))
 		{
 			TimeGoal = TimeGoal * 2;
-			IsTimeModified = true;
 		}
 		if (info.GetPortPlateCount() > SolveNum) 
 		{
 			TimeGoal = TimeGoal % 81;
-			IsTimeModified = true;
 		}
 		if (info.GetSerialNumber().Contains("3")) 
 		{
 			TimeGoal = TimeGoal * 9;
-			IsTimeModified = true;
-		}
-		if (IsTimeModified == false) 
-		{
-			TimeGoal = SolveNum;
 		}
 		TimeGoal = TimeGoal % 60;
+		Debug.LogFormat ("[Again #{0}] Time goal is {1}", ModuleId, TimeGoal);
 		timeCreating = true;
 	}
 
@@ -286,12 +274,14 @@ public class SimpleModuleScript : MonoBehaviour {
 						if ((int) info.GetTime () % 60 == TimeGoal) 
 						{
 							SolveNum++;
+							Log ("Correct press");
 							On = false;
 						}
 						else 
 						{
-							Debug.LogFormat ("Last two digits were {0} and time goal was {1}", (int) info.GetTime () % 60, TimeGoal);
+							Debug.LogFormat ("[Again #{0}] Strike! Last two digits were {1} and time goal was {2}", ModuleId, (int) info.GetTime () % 60, TimeGoal);
 							TimeGoal = 0;
+							TimeEnd = -1;
 							module.HandleStrike ();
 							On = false;
 							timeCreating = false;
@@ -382,80 +372,5 @@ public class SimpleModuleScript : MonoBehaviour {
 	{
 		Debug.LogFormat("[Again #{0}] {1}", ModuleId, message);
 	}
-
-	//twitch plays
-	#pragma warning disable 414
-	private readonly string TwitchHelpMessage = @"!{0} press (##) [Presses the button (optionally when the last two digits of the bomb's timer are '##')]";
-	#pragma warning restore 414
-	IEnumerator ProcessTwitchCommand(string command)
-	{
-		string[] parameters = command.Split(' ');
-		if (Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-		{
-			if (parameters.Length > 2)
-				yield return "sendtochaterror Too many parameters!";
-			else if (parameters.Length == 2)
-			{
-				int temp = -1;
-				if (!int.TryParse(parameters[1], out temp))
-				{
-					yield return "sendtochaterror!f The specified number '" + parameters[1] + "' is invalid!";
-					yield break;
-				}
-				if (temp < 0 || temp > 59)
-				{
-					yield return "sendtochaterror The specified number '" + parameters[1] + "' is out of range 00-59!";
-					yield break;
-				}
-				if (parameters[1].Length != 2)
-				{
-					yield return "sendtochaterror The specified number '" + parameters[1] + "' is not 2 digits long!";
-					yield break;
-				}
-				if (!On)
-                {
-					yield return "sendtochaterror The button can only be pressed when the module is on!";
-					yield break;
-				}
-				yield return null;
-				while (temp != (int)info.GetTime() % 60) yield return "trycancel Halted waiting to press the button due to a cancel request!";
-				Button[0].OnInteract();
-			}
-			else if (parameters.Length == 1)
-			{
-				if (!On)
-				{
-					yield return "sendtochaterror The button can only be pressed when the module is on!";
-					yield break;
-				}
-				yield return null;
-				Button[0].OnInteract();
-			}
-		}
-	}
-
-	void TwitchHandleForcedSolve()
-	{
-		StartCoroutine(HandleAutoSolve());
-	}
-
-	IEnumerator HandleAutoSolve()
-    {
-		while (!_isSolved)
-        {
-			while (!On) yield return null;
-			pressAgain:
-			Button[0].OnInteract();
-			yield return null;
-			while ((int)info.GetTime() % 60 != TimeGoal)
-            {
-				yield return null;
-				if (!timeCreating)
-					goto pressAgain;
-            }
-			Button[0].OnInteract();
-			yield return null;
-		}
-    }
 }
 
